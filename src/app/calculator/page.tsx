@@ -27,6 +27,13 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+/** Strip non-digits and leading zeros — leave "0" if result is empty */
+function cleanNumeric(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  const cleaned = digits.replace(/^0+(?=\d)/, ""); // strip leading zeros but keep "0"
+  return cleaned;
+}
+
 export default function CalculatorPage() {
   const { state, setNumber, updateInput, resetInput } = useTaxContext();
   const { input, result } = state;
@@ -34,13 +41,21 @@ export default function CalculatorPage() {
 
   const handleNumberChange = useCallback(
     (key: keyof TaxInput, raw: string) => {
-      const value = raw === "" ? 0 : Number(raw);
-      if (!isNaN(value) && value >= 0) {
-        setNumber(key, value);
-      }
+      const cleaned = cleanNumeric(raw);
+      const value = cleaned === "" ? 0 : Number(cleaned);
+      setNumber(key, value);
     },
     [setNumber]
   );
+
+  const inputProps = (key: keyof TaxInput, placeholder = "0") => ({
+    type: "text",
+    inputMode: "numeric" as const,
+    value: input[key] === 0 ? "" : String(input[key] || ""),
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+      handleNumberChange(key, e.target.value),
+    placeholder,
+  });
 
   return (
     <div className="min-h-full bg-background">
@@ -90,49 +105,21 @@ export default function CalculatorPage() {
               <TabsContent value="income" className="space-y-3">
                 <div className="space-y-1.5">
                   <Label>เงินเดือน (บาท/เดือน)</Label>
-                  <Input
-                    type="number"
-                    value={input.monthlySalary || ""}
-                    onChange={(e) =>
-                      handleNumberChange("monthlySalary", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("monthlySalary")} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>โบนัส (บาท)</Label>
-                    <Input
-                      type="number"
-                      value={input.bonus || ""}
-                      onChange={(e) =>
-                        handleNumberChange("bonus", e.target.value)
-                      }
-                      placeholder="0"
-                    />
+                    <Input {...inputProps("bonus")} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>จำนวนเดือนโบนัส</Label>
-                    <Input
-                      type="number"
-                      value={input.bonusMonths || ""}
-                      onChange={(e) =>
-                        handleNumberChange("bonusMonths", e.target.value)
-                      }
-                      placeholder="1"
-                    />
+                    <Input {...inputProps("bonusMonths", "1")} />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>จำนวนเดือนที่ทำงาน</Label>
-                  <Input
-                    type="number"
-                    value={input.monthsWorked || ""}
-                    onChange={(e) =>
-                      handleNumberChange("monthsWorked", e.target.value)
-                    }
-                    placeholder="12"
-                  />
+                  <Input {...inputProps("monthsWorked", "12")} />
                 </div>
               </TabsContent>
 
@@ -140,47 +127,19 @@ export default function CalculatorPage() {
               <TabsContent value="deductions" className="space-y-3">
                 <div className="space-y-1.5">
                   <Label>ประกันสังคม (บาท/ปี, สูงสุด 9,000)</Label>
-                  <Input
-                    type="number"
-                    value={input.socialSecurity || ""}
-                    onChange={(e) =>
-                      handleNumberChange("socialSecurity", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("socialSecurity")} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>กองทุนสำรองเลี้ยงชีพ (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.providentFund || ""}
-                    onChange={(e) =>
-                      handleNumberChange("providentFund", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("providentFund")} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>ประกันชีวิต (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.lifeInsurance || ""}
-                    onChange={(e) =>
-                      handleNumberChange("lifeInsurance", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("lifeInsurance")} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>ประกันสุขภาพ (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.healthInsurance || ""}
-                    onChange={(e) =>
-                      handleNumberChange("healthInsurance", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("healthInsurance")} />
                 </div>
               </TabsContent>
 
@@ -188,47 +147,19 @@ export default function CalculatorPage() {
               <TabsContent value="extra" className="space-y-3">
                 <div className="space-y-1.5">
                   <Label>เลี้ยงดูบิดามารดา (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.parentCare || ""}
-                    onChange={(e) =>
-                      handleNumberChange("parentCare", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("parentCare")} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>จำนวนบุตร</Label>
-                  <Input
-                    type="number"
-                    value={input.children || ""}
-                    onChange={(e) =>
-                      handleNumberChange("children", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("children")} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>RMF/SSF (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.retirementFund || ""}
-                    onChange={(e) =>
-                      handleNumberChange("retirementFund", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("retirementFund")} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>เงินบริจาค (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.donation || ""}
-                    onChange={(e) =>
-                      handleNumberChange("donation", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("donation")} />
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
@@ -262,14 +193,7 @@ export default function CalculatorPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>ลดหย่อนอื่นๆ (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.otherDeductions || ""}
-                    onChange={(e) =>
-                      handleNumberChange("otherDeductions", e.target.value)
-                    }
-                    placeholder="0"
-                  />
+                  <Input {...inputProps("otherDeductions")} />
                 </div>
               </TabsContent>
             </Tabs>

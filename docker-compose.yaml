@@ -3,23 +3,10 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NEXT_TELEMETRY_DISABLED=1
       - PORT=3000
       - HOSTNAME=0.0.0.0
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.thai-tax.rule=Host(`tax.phoubon.in.th`)"
-      - "traefik.http.routers.thai-tax.entrypoints=http"
-      - "traefik.http.routers.thai-tax-secure.rule=Host(`tax.phoubon.in.th`)"
-      - "traefik.http.routers.thai-tax-secure.entrypoints=https"
-      - "traefik.http.routers.thai-tax-secure.tls=true"
-      - "traefik.http.routers.thai-tax-secure.tls.certresolver=letsencrypt"
-      - "traefik.http.services.thai-tax.loadbalancer.server.port=3000"
-    networks:
-      - coolify
-networks:
-  coolify:
-    external: true

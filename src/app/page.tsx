@@ -22,13 +22,22 @@ import {
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [salary, setSalary] = useState(30000);
+  const [salaryText, setSalaryText] = useState("");
   const [quickResult, setQuickResult] = useState<TaxResult | null>(null);
 
   const handleQuickCalc = () => {
+    const salary = Number(salaryText.replace(/^0+/, "") || "0");
+    if (salary <= 0) return;
     const input = { ...getDefaultInput(), monthlySalary: salary };
     const result = calculateTax(input);
     setQuickResult(result);
+  };
+
+  const handleSalaryChange = (raw: string) => {
+    // Allow only digits, strip leading zeros
+    const digits = raw.replace(/\D/g, "");
+    const cleaned = digits.replace(/^0+/, "");
+    setSalaryText(cleaned);
   };
 
   const features = [
@@ -85,9 +94,10 @@ export default function DashboardPage() {
               <Label htmlFor="quick-salary">เงินเดือน (บาท/เดือน)</Label>
               <Input
                 id="quick-salary"
-                type="number"
-                value={salary}
-                onChange={(e) => setSalary(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                value={salaryText}
+                onChange={(e) => handleSalaryChange(e.target.value)}
                 placeholder="เช่น 30000"
                 className="text-base font-medium"
               />
