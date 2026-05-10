@@ -9,8 +9,11 @@ services:
       - NEXT_TELEMETRY_DISABLED=1
       - PORT=3005
       - HOSTNAME=0.0.0.0
-    ports:
-      - "3005:3005"
+    expose:
+      - "3005"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.web.loadbalancer.server.port=3005"
     networks:
       - coolify
 networks:
