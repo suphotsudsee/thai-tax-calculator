@@ -1,0 +1,18 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3005
+      - HOSTNAME=0.0.0.0
+    ports:
+      - "3005:3005"
+    networks:
+      - coolify
+networks:
+  coolify:
+    external: true
