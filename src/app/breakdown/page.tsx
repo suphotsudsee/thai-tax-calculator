@@ -4,14 +4,17 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BracketChart } from "@/components/BracketChart";
 import {
   calculateTax,
   getDefaultInput,
   TaxInput,
   TaxResult,
 } from "@/lib/tax-calculator";
-import { PieChart, Minus, Equal } from "lucide-react";
+import { PieChart } from "lucide-react";
+
+function fmt(n: number): string {
+  return n.toLocaleString("th-TH");
+}
 
 export default function BreakdownPage() {
   const [salary, setSalary] = useState(40000);
@@ -39,6 +42,10 @@ export default function BreakdownPage() {
   );
 
   const result: TaxResult = useMemo(() => calculateTax(input), [input]);
+  const totalTax = result.breakdown.reduce((sum, b) => sum + b.tax, 0);
+
+  // Only show brackets that have tax (active steps)
+  const activeBrackets = result.breakdown.filter((b) => b.tax > 0);
 
   return (
     <div className="min-h-full bg-background">
@@ -123,63 +130,103 @@ export default function BreakdownPage() {
           </CardContent>
         </Card>
 
-        {/* HOW TO CALCULATE NET INCOME — like the post */}
+        {/* === MAIN CARD: Net Income + Tax Brackets in ONE flow === */}
         <Card size="sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-1.5">
-              🧮 วิธีหาเงินได้สุทธิ
-            </CardTitle>
+            <CardTitle className="text-sm">🧮 วิธีคำนวณภาษีแบบขั้นบันได</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {/* Step 1: Annual Income */}
-            <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-md bg-muted/30">
-              <span className="text-muted-foreground">รายได้ทั้งปี</span>
-              <span className="font-medium">
-                ({salary.toLocaleString("th-TH")} × 12
-                {bonus > 0
-                  ? ` + ${bonus.toLocaleString("th-TH")} × ${bonusMonths}`
-                  : ""}
-                )
-              </span>
+          <CardContent>
+            {/* --- Section 1: Net Income Calculation --- */}
+            <div className="space-y-1.5 text-sm">
+              {/* Annual Income */}
+              <div className="flex items-center justify-between py-1">
+                <span className="text-muted-foreground">รายได้ทั้งปี</span>
+                <span className="font-medium tabular-nums">
+                  {fmt(result.annualIncome)} บาท
+                </span>
+              </div>
+
+              {/* Expenses */}
+              <div className="flex items-center justify-between py-1">
+                <span className="text-muted-foreground">- ค่าใช้จ่าย</span>
+                <span className="font-medium tabular-nums text-red-500">
+                  {fmt(result.expenses)} บาท
+                </span>
+              </div>
+
+              {/* Deductions */}
+              <div className="flex items-center justify-between py-1">
+                <span className="text-muted-foreground">- ค่าลดหย่อน</span>
+                <span className="font-medium tabular-nums text-red-500">
+                  {fmt(result.totalDeductions)} บาท
+                </span>
+              </div>
+
+              {/* Divider + Net Income */}
+              <div className="border-t border-border my-2" />
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-semibold">รายได้สุทธิเพื่อคำนวณภาษี</span>
+                <span className="font-bold tabular-nums">
+                  {fmt(result.netIncome)} บาท
+                </span>
+              </div>
             </div>
 
-            <div className="flex justify-center">
-              <Minus className="size-3 text-muted-foreground" />
+            {/* --- Section 2: Tax Brackets --- */}
+            <div className="mt-4 pt-3 border-t border-border">
+              <p className="text-[11px] text-muted-foreground mb-3">
+                นำเงินได้สุทธิ {fmt(result.netIncome)} บาท ไปคิดภาษีทีละขั้น
+              </p>
+
+              <div className="space-y-1.5 text-sm">
+                {result.breakdown
+                  .filter((b) => b.tax > 0 || result.netIncome > b.amount)
+                  .map((bracket, i) => {
+                    const isExempt = bracket.tax === 0 && bracket.amount === 0;
+                    return (
+                      <div
+                        key={bracket.step}
+                        className="flex items-center justify-between py-1"
+                      >
+                        <span className="text-muted-foreground">
+                          {bracket.step}: {bracket.range}
+                        </span>
+                        {isExempt ? (
+                          <span className="text-muted-foreground text-xs">
+                            ยกเว้น
+                          </span>
+                        ) : bracket.tax > 0 ? (
+                          <span className="font-medium tabular-nums text-red-500">
+                            {fmt(bracket.amount)} × {bracket.rate} ={" "}
+                            {fmt(Math.round(bracket.tax))} บาท
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">
+                            -
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Divider + Total Tax */}
+              <div className="border-t border-border my-2" />
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-semibold">รวมภาษีที่ต้องจ่าย</span>
+                <span className="font-bold tabular-nums text-red-500 text-base">
+                  {fmt(Math.round(totalTax))} บาท
+                </span>
+              </div>
             </div>
 
-            {/* Step 2: Expenses */}
-            <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-md bg-muted/30">
-              <span className="text-muted-foreground">
-                หักค่าใช้จ่าย (50%, สูงสุด 100,000)
-              </span>
-              <span className="font-medium">
-                {result.expenses.toLocaleString("th-TH")}
-              </span>
-            </div>
-
-            <div className="flex justify-center">
-              <Minus className="size-3 text-muted-foreground" />
-            </div>
-
-            {/* Step 3: Deductions */}
-            <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-md bg-muted/30">
-              <span className="text-muted-foreground">
-                หักค่าลดหย่อน (ส่วนตัว + อื่นๆ)
-              </span>
-              <span className="font-medium">
-                {result.totalDeductions.toLocaleString("th-TH")}
-              </span>
-            </div>
-
-            <div className="flex justify-center">
-              <Equal className="size-3 text-primary" />
-            </div>
-
-            {/* Result: Net Income */}
-            <div className="flex items-center justify-between text-sm py-2 px-3 rounded-md bg-primary/5 border border-primary/20 font-bold">
-              <span>เงินได้สุทธิ</span>
-              <span className="text-primary">
-                {result.netIncome.toLocaleString("th-TH")} บาท
+            {/* --- Monthly average --- */}
+            <div className="mt-2 text-center">
+              <span className="text-[11px] text-muted-foreground">
+                เฉลี่ยภาษีต่อเดือน ≈{" "}
+                <span className="font-medium text-foreground">
+                  {fmt(Math.round(totalTax / 12))} บาท
+                </span>
               </span>
             </div>
           </CardContent>
@@ -203,48 +250,38 @@ export default function BreakdownPage() {
                   <span className="text-muted-foreground">
                     กองทุนสำรองเลี้ยงชีพ (PVD)
                   </span>
-                  <span>{pvd.toLocaleString("th-TH")}</span>
+                  <span>{fmt(pvd)}</span>
                 </div>
               )}
               {socialSecurity > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ประกันสังคม</span>
-                  <span>{socialSecurity.toLocaleString("th-TH")}</span>
+                  <span>{fmt(socialSecurity)}</span>
                 </div>
               )}
               {lifeInsurance > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ประกันชีวิต</span>
-                  <span>{lifeInsurance.toLocaleString("th-TH")}</span>
+                  <span>{fmt(lifeInsurance)}</span>
                 </div>
               )}
               {donation > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">เงินบริจาค</span>
-                  <span>{donation.toLocaleString("th-TH")}</span>
+                  <span>{fmt(donation)}</span>
                 </div>
               )}
               {otherDeductions > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">อื่นๆ</span>
-                  <span>{otherDeductions.toLocaleString("th-TH")}</span>
+                  <span>{fmt(otherDeductions)}</span>
                 </div>
               )}
               <div className="border-t pt-1.5 flex justify-between font-medium">
                 <span>รวมค่าลดหย่อน</span>
-                <span>{result.totalDeductions.toLocaleString("th-TH")}</span>
+                <span>{fmt(result.totalDeductions)}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* THE MAIN EVENT — Step-by-step tax brackets */}
-        <Card size="sm">
-          <CardContent className="pt-4">
-            <BracketChart
-              breakdown={result.breakdown}
-              netIncome={result.netIncome}
-            />
           </CardContent>
         </Card>
 
@@ -253,8 +290,8 @@ export default function BreakdownPage() {
           <Card size="sm" className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
             <CardContent className="py-3">
               <p className="text-xs text-green-800 dark:text-green-200">
-                💡 ถ้าถูกหักภาษี ณ ที่จ่ายเกิน {result.annualTax.toLocaleString("th-TH")} บาท 
-                จะได้รับเงินคืนในปีถัดไป
+                💡 ถ้าถูกหักภาษี ณ ที่จ่ายเกิน{" "}
+                {fmt(Math.round(result.annualTax))} บาท จะได้รับเงินคืนในปีถัดไป
               </p>
             </CardContent>
           </Card>
@@ -262,8 +299,7 @@ export default function BreakdownPage() {
 
         {/* Disclaimer */}
         <p className="text-center text-[11px] text-muted-foreground pb-4">
-          * อัตราภาษีอิงตามกฎหมายภาษีเงินได้บุคคลธรรมดาล่าสุด ตัวเลขอาจ
-          คลาดเคลื่อนเล็กน้อยจากการปัดเศษ
+          * อัตราภาษีอิงตามกฎหมายภาษีเงินได้บุคคลธรรมดาล่าสุด
         </p>
       </div>
     </div>
