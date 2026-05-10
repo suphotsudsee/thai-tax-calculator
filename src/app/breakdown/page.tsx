@@ -5,36 +5,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BracketChart } from "@/components/BracketChart";
-import { TaxResultCard } from "@/components/TaxResultCard";
 import {
   calculateTax,
   getDefaultInput,
   TaxInput,
   TaxResult,
 } from "@/lib/tax-calculator";
-import { PieChart } from "lucide-react";
+import { PieChart, Minus, Equal } from "lucide-react";
 
 export default function BreakdownPage() {
-  const [salary, setSalary] = useState(30000);
-  const [deductions, setDeductions] = useState(0);
-  const [donation, setDonation] = useState(0);
+  const [salary, setSalary] = useState(40000);
+  const [bonus, setBonus] = useState(0);
+  const [bonusMonths, setBonusMonths] = useState(1);
+  const [pvd, setPvd] = useState(0);
+  const [socialSecurity, setSocialSecurity] = useState(0);
   const [lifeInsurance, setLifeInsurance] = useState(0);
+  const [donation, setDonation] = useState(0);
+  const [otherDeductions, setOtherDeductions] = useState(0);
 
   const input: TaxInput = useMemo(
     () => ({
       ...getDefaultInput(),
       monthlySalary: salary,
-      socialSecurity: 9000,
+      bonus,
+      bonusMonths,
+      socialSecurity,
+      providentFund: pvd,
       lifeInsurance,
       donation,
-      otherDeductions: deductions,
+      otherDeductions,
     }),
-    [salary, deductions, donation, lifeInsurance]
+    [salary, bonus, bonusMonths, pvd, socialSecurity, lifeInsurance, donation, otherDeductions]
   );
 
   const result: TaxResult = useMemo(() => calculateTax(input), [input]);
-
-  const totalTax = result.breakdown.reduce((sum, b) => sum + b.tax, 0);
 
   return (
     <div className="min-h-full bg-background">
@@ -47,7 +51,7 @@ export default function BreakdownPage() {
           <div>
             <h1 className="text-lg font-bold">รายละเอียดภาษี</h1>
             <p className="text-xs text-muted-foreground">
-              ดูรายละเอียดการคำนวณภาษีในแต่ละขั้น
+              ดูวิธีคิดภาษีทีละขั้นแบบขั้นบันได
             </p>
           </div>
         </div>
@@ -60,7 +64,7 @@ export default function BreakdownPage() {
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>เงินเดือน (บาท)</Label>
+                <Label>เงินเดือน (บาท/เดือน)</Label>
                 <Input
                   type="number"
                   value={salary || ""}
@@ -68,17 +72,37 @@ export default function BreakdownPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>ลดหย่อนอื่นๆ (บาท)</Label>
+                <Label>โบนัส (บาท)</Label>
                 <Input
                   type="number"
-                  value={deductions || ""}
-                  onChange={(e) => setDeductions(Number(e.target.value) || 0)}
+                  value={bonus || ""}
+                  onChange={(e) => setBonus(Number(e.target.value) || 0)}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>ประกันชีวิต (บาท)</Label>
+                <Label>กองทุนสำรองเลี้ยงชีพ (บาท/ปี)</Label>
+                <Input
+                  type="number"
+                  value={pvd || ""}
+                  onChange={(e) => setPvd(Number(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>ประกันสังคม (บาท/ปี)</Label>
+                <Input
+                  type="number"
+                  value={socialSecurity || ""}
+                  onChange={(e) =>
+                    setSocialSecurity(Number(e.target.value) || 0)
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>ประกันชีวิต (บาท/ปี)</Label>
                 <Input
                   type="number"
                   value={lifeInsurance || ""}
@@ -99,176 +123,122 @@ export default function BreakdownPage() {
           </CardContent>
         </Card>
 
-        {/* Summary */}
-        <TaxResultCard result={result} />
-
-        {/* Income Breakdown Vis */}
+        {/* HOW TO CALCULATE NET INCOME — like the post */}
         <Card size="sm">
-          <CardHeader>
-            <CardTitle className="text-sm">สัดส่วนรายได้</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              🧮 วิธีหาเงินได้สุทธิ
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {/* Horizontal stacked bar: Income → after expenses → after deductions → net */}
-              <div>
-                <div className="flex justify-between text-[10px] mb-1">
-                  <span className="text-muted-foreground">รายได้ทั้งปี</span>
-                  <span className="font-medium">
-                    {result.annualIncome.toLocaleString("th-TH")}
-                  </span>
-                </div>
-                <div className="h-5 w-full rounded-full bg-muted overflow-hidden flex">
-                  {/* Net income portion */}
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-                    style={{
-                      width: `${
-                        result.annualIncome > 0
-                          ? (result.netIncome / result.annualIncome) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                  {/* Deductions portion */}
-                  <div
-                    className="h-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-500"
-                    style={{
-                      width: `${
-                        result.annualIncome > 0
-                          ? (result.totalDeductions / result.annualIncome) *
-                            100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                  {/* Expenses portion */}
-                  <div
-                    className="h-full bg-gradient-to-r from-rose-400 to-rose-500 transition-all duration-500"
-                    style={{
-                      width: `${
-                        result.annualIncome > 0
-                          ? (result.expenses / result.annualIncome) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-                <div className="flex gap-4 mt-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-emerald-500" />
-                    <span className="text-[10px] text-muted-foreground">
-                      รายได้สุทธิ{" "}
-                      <span className="font-medium text-foreground">
-                        {result.netIncome.toLocaleString("th-TH")}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-amber-500" />
-                    <span className="text-[10px] text-muted-foreground">
-                      ลดหย่อน{" "}
-                      <span className="font-medium text-foreground">
-                        {result.totalDeductions.toLocaleString("th-TH")}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-rose-500" />
-                    <span className="text-[10px] text-muted-foreground">
-                      ค่าใช้จ่าย{" "}
-                      <span className="font-medium text-foreground">
-                        {result.expenses.toLocaleString("th-TH")}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </div>
+          <CardContent className="space-y-2">
+            {/* Step 1: Annual Income */}
+            <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-md bg-muted/30">
+              <span className="text-muted-foreground">รายได้ทั้งปี</span>
+              <span className="font-medium">
+                ({salary.toLocaleString("th-TH")} × 12
+                {bonus > 0
+                  ? ` + ${bonus.toLocaleString("th-TH")} × ${bonusMonths}`
+                  : ""}
+                )
+              </span>
+            </div>
+
+            <div className="flex justify-center">
+              <Minus className="size-3 text-muted-foreground" />
+            </div>
+
+            {/* Step 2: Expenses */}
+            <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-md bg-muted/30">
+              <span className="text-muted-foreground">
+                หักค่าใช้จ่าย (50%, สูงสุด 100,000)
+              </span>
+              <span className="font-medium">
+                {result.expenses.toLocaleString("th-TH")}
+              </span>
+            </div>
+
+            <div className="flex justify-center">
+              <Minus className="size-3 text-muted-foreground" />
+            </div>
+
+            {/* Step 3: Deductions */}
+            <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-md bg-muted/30">
+              <span className="text-muted-foreground">
+                หักค่าลดหย่อน (ส่วนตัว + อื่นๆ)
+              </span>
+              <span className="font-medium">
+                {result.totalDeductions.toLocaleString("th-TH")}
+              </span>
+            </div>
+
+            <div className="flex justify-center">
+              <Equal className="size-3 text-primary" />
+            </div>
+
+            {/* Result: Net Income */}
+            <div className="flex items-center justify-between text-sm py-2 px-3 rounded-md bg-primary/5 border border-primary/20 font-bold">
+              <span>เงินได้สุทธิ</span>
+              <span className="text-primary">
+                {result.netIncome.toLocaleString("th-TH")} บาท
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tax vs Net Income donut comparison */}
+        {/* Deduction breakdown */}
         <Card size="sm">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm">
-              ภาษีเทียบกับรายได้สุทธิ
+              📋 รายละเอียดค่าลดหย่อน
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-4 justify-center">
-                {/* Simple CSS pie using conic-gradient */}
-                {result.annualIncome > 0 && (
-                  <div className="relative size-28">
-                    <div
-                      className="size-full rounded-full"
-                      style={{
-                        background: `conic-gradient(
-                          #ef4444 0deg ${
-                            (result.annualTax / result.annualIncome) * 360
-                          }deg,
-                          #22c55e ${
-                            (result.annualTax / result.annualIncome) * 360
-                          }deg ${
-                            ((result.netIncome - result.annualTax) /
-                              result.annualIncome) *
-                            360
-                          }deg,
-                          #f59e0b ${
-                            ((result.netIncome - result.annualTax) /
-                              result.annualIncome) *
-                            360
-                          }deg 360deg
-                        )`,
-                      }}
-                    />
-                    <div className="absolute inset-[25%] rounded-full bg-card flex items-center justify-center">
-                      <span className="text-xs font-bold text-center">
-                        {result.effectiveTaxRate.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-red-500" />
-                    <span className="text-[11px]">ภาษี</span>
-                    <span className="text-[11px] font-medium ml-auto">
-                      {result.annualTax.toLocaleString("th-TH", {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-emerald-500" />
-                    <span className="text-[11px]">รายได้หลังหักภาษี</span>
-                    <span className="text-[11px] font-medium ml-auto">
-                      {(
-                        result.netIncome - result.annualTax
-                      ).toLocaleString("th-TH", {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-amber-500" />
-                    <span className="text-[11px]">ค่าใช้จ่าย+ลดหย่อน</span>
-                    <span className="text-[11px] font-medium ml-auto">
-                      {(
-                        result.expenses + result.totalDeductions
-                      ).toLocaleString("th-TH", {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ค่าลดหย่อนส่วนตัว</span>
+                <span>60,000</span>
+              </div>
+              {pvd > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    กองทุนสำรองเลี้ยงชีพ (PVD)
+                  </span>
+                  <span>{pvd.toLocaleString("th-TH")}</span>
                 </div>
+              )}
+              {socialSecurity > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ประกันสังคม</span>
+                  <span>{socialSecurity.toLocaleString("th-TH")}</span>
+                </div>
+              )}
+              {lifeInsurance > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ประกันชีวิต</span>
+                  <span>{lifeInsurance.toLocaleString("th-TH")}</span>
+                </div>
+              )}
+              {donation > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">เงินบริจาค</span>
+                  <span>{donation.toLocaleString("th-TH")}</span>
+                </div>
+              )}
+              {otherDeductions > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">อื่นๆ</span>
+                  <span>{otherDeductions.toLocaleString("th-TH")}</span>
+                </div>
+              )}
+              <div className="border-t pt-1.5 flex justify-between font-medium">
+                <span>รวมค่าลดหย่อน</span>
+                <span>{result.totalDeductions.toLocaleString("th-TH")}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bracket Chart */}
+        {/* THE MAIN EVENT — Step-by-step tax brackets */}
         <Card size="sm">
           <CardContent className="pt-4">
             <BracketChart
@@ -277,6 +247,18 @@ export default function BreakdownPage() {
             />
           </CardContent>
         </Card>
+
+        {/* Tax refund hint */}
+        {result.annualTax > 0 && (
+          <Card size="sm" className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+            <CardContent className="py-3">
+              <p className="text-xs text-green-800 dark:text-green-200">
+                💡 ถ้าถูกหักภาษี ณ ที่จ่ายเกิน {result.annualTax.toLocaleString("th-TH")} บาท 
+                จะได้รับเงินคืนในปีถัดไป
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Disclaimer */}
         <p className="text-center text-[11px] text-muted-foreground pb-4">
