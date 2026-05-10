@@ -189,7 +189,7 @@ export default function CalculatorPage() {
                     onChange={(e) =>
                       handleNumberChange("socialSecurity", e.target.value)
                     }
-                    placeholder="9000"
+                    placeholder="0"
                   />
                 </div>
                 <div className="space-y-1.5">

@@ -229,7 +229,7 @@ export function getDefaultInput(): TaxInput {
     monthlySalary: 30000,
     bonus: 0,
     bonusMonths: 1,
-    socialSecurity: 9000,
+    socialSecurity: 0,
     providentFund: 0,
     lifeInsurance: 0,
     healthInsurance: 0,
