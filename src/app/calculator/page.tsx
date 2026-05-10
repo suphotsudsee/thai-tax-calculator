@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Card,
   CardContent,
@@ -30,6 +30,7 @@ import {
 export default function CalculatorPage() {
   const { state, setNumber, updateInput, resetInput } = useTaxContext();
   const { input, result } = state;
+  const [tab, setTab] = useState("income");
 
   const handleNumberChange = useCallback(
     (key: keyof TaxInput, raw: string) => {
@@ -72,7 +73,7 @@ export default function CalculatorPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value="income" className="w-full">
+            <Tabs value={tab} onValueChange={setTab} className="w-full">
               <TabsList className="w-full mb-3">
                 <TabsTrigger value="income" className="flex-1 text-[11px]">
                   รายได้
