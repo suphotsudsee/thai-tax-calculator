@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
+import { TaxProvider } from "@/lib/TaxContext";
 
 const notoSansThai = Noto_Sans_Thai({
   variable: "--font-sans",
@@ -64,8 +65,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <div className="flex-1 pb-16">{children}</div>
-        <Navbar />
+        <TaxProvider>
+          <div className="flex-1 pb-16">{children}</div>
+          <Navbar />
+        </TaxProvider>
       </body>
     </html>
   );

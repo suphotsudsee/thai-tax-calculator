@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -20,90 +20,73 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaxResultCard } from "@/components/TaxResultCard";
-import {
-  calculateTax,
-  getDefaultInput,
-  TaxInput,
-  TaxResult,
-} from "@/lib/tax-calculator";
+import { TaxInput } from "@/lib/tax-calculator";
+import { useTaxContext } from "@/lib/TaxContext";
 import {
   Calculator,
   RotateCcw,
 } from "lucide-react";
 
 export default function CalculatorPage() {
-  const [input, setInput] = useState<TaxInput>(getDefaultInput());
-  const [result, setResult] = useState<TaxResult | null>(null);
-  const [activeTab, setActiveTab] = useState("income");
-
-  const updateField = useCallback(
-    <K extends keyof TaxInput>(key: K, value: TaxInput[K]) => {
-      setInput((prev) => {
-        const next = { ...prev, [key]: value };
-        const result = calculateTax(next);
-        setResult(result);
-        return next;
-      });
-    },
-    []
-  );
+  const { state, setNumber, updateInput, resetInput } = useTaxContext();
+  const { input, result } = state;
 
   const handleNumberChange = useCallback(
     (key: keyof TaxInput, raw: string) => {
       const value = raw === "" ? 0 : Number(raw);
       if (!isNaN(value) && value >= 0) {
-        updateField(key, value);
+        setNumber(key, value);
       }
     },
-    [updateField]
+    [setNumber]
   );
-
-  const handleReset = () => {
-    const defaults = getDefaultInput();
-    setInput(defaults);
-    setResult(calculateTax(defaults));
-  };
-
-  // Initial calculation on mount already handled by useState
 
   return (
     <div className="min-h-full bg-background">
       <div className="mx-auto max-w-lg px-4 py-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold">คำนวณภาษี</h1>
-            <p className="text-xs text-muted-foreground">
-              กรอกข้อมูลให้ครบเพื่อผลลัพธ์ที่แม่นยำ
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
+              <Calculator className="size-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold">คำนวณภาษี</h1>
+              <p className="text-xs text-muted-foreground">
+                กรอกข้อมูลเพื่อคำนวณภาษีที่ต้องจ่าย
+              </p>
+            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleReset}>
-            <RotateCcw className="size-3.5" />
-            <span className="hidden sm:inline">รีเซ็ต</span>
+          <Button variant="outline" size="sm" onClick={resetInput}>
+            <RotateCcw className="size-3.5 mr-1" />
+            รีเซ็ต
           </Button>
         </div>
 
-        {/* Form in Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList variant="default" className="w-full">
-            <TabsTrigger value="income" className="flex-1 text-xs">
-              รายได้
-            </TabsTrigger>
-            <TabsTrigger value="deductions" className="flex-1 text-xs">
-              ลดหย่อน
-            </TabsTrigger>
-            <TabsTrigger value="extra" className="flex-1 text-xs">
-              เพิ่มเติม
-            </TabsTrigger>
-          </TabsList>
+        {/* Input Form */}
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle className="text-sm">ข้อมูลสำหรับคำนวณ</CardTitle>
+            <CardDescription className="text-[11px]">
+              เปลี่ยนแปลงค่าเพื่อดูผลลัพธ์ทันที
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value="income" className="w-full">
+              <TabsList className="w-full mb-3">
+                <TabsTrigger value="income" className="flex-1 text-[11px]">
+                  รายได้
+                </TabsTrigger>
+                <TabsTrigger value="deductions" className="flex-1 text-[11px]">
+                  ลดหย่อน
+                </TabsTrigger>
+                <TabsTrigger value="extra" className="flex-1 text-[11px]">
+                  เพิ่มเติม
+                </TabsTrigger>
+              </TabsList>
 
-          {/* Income Tab */}
-          <TabsContent value="income" className="mt-4">
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle className="text-sm">ข้อมูลรายได้</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+              {/* Income Tab */}
+              <TabsContent value="income" className="space-y-3">
                 <div className="space-y-1.5">
                   <Label>เงินเดือน (บาท/เดือน)</Label>
                   <Input
@@ -112,12 +95,12 @@ export default function CalculatorPage() {
                     onChange={(e) =>
                       handleNumberChange("monthlySalary", e.target.value)
                     }
-                    placeholder="30000"
+                    placeholder="0"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>โบนัส (บาท/เดือน)</Label>
+                    <Label>โบนัส (บาท)</Label>
                     <Input
                       type="number"
                       value={input.bonus || ""}
@@ -129,58 +112,31 @@ export default function CalculatorPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>จำนวนเดือนโบนัส</Label>
-                    <Select
-                      value={String(input.bonusMonths)}
-                      onValueChange={(v) =>
-                        updateField("bonusMonths", Number(v))
+                    <Input
+                      type="number"
+                      value={input.bonusMonths || ""}
+                      onChange={(e) =>
+                        handleNumberChange("bonusMonths", e.target.value)
                       }
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue placeholder="เลือก" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[0, 0.5, 1, 1.5, 2, 3, 4, 5, 6].map((m) => (
-                          <SelectItem key={m} value={String(m)}>
-                            {m} เดือน
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="1"
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>จำนวนเดือนที่ทำงานในปี</Label>
-                  <Select
-                    value={String(input.monthsWorked)}
-                    onValueChange={(v) =>
-                      updateField("monthsWorked", Number(v))
+                  <Label>จำนวนเดือนที่ทำงาน</Label>
+                  <Input
+                    type="number"
+                    value={input.monthsWorked || ""}
+                    onChange={(e) =>
+                      handleNumberChange("monthsWorked", e.target.value)
                     }
-                  >
-                    <SelectTrigger size="sm" className="w-full">
-                      <SelectValue placeholder="เลือก" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                        (m) => (
-                          <SelectItem key={m} value={String(m)}>
-                            {m} เดือน
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+                    placeholder="12"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Deductions Tab */}
-          <TabsContent value="deductions" className="mt-4">
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle className="text-sm">ค่าลดหย่อน</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+              {/* Deductions Tab */}
+              <TabsContent value="deductions" className="space-y-3">
                 <div className="space-y-1.5">
                   <Label>ประกันสังคม (บาท/ปี, สูงสุด 9,000)</Label>
                   <Input
@@ -203,32 +159,56 @@ export default function CalculatorPage() {
                     placeholder="0"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>ประกันชีวิต (สูงสุด 100,000)</Label>
-                    <Input
-                      type="number"
-                      value={input.lifeInsurance || ""}
-                      onChange={(e) =>
-                        handleNumberChange("lifeInsurance", e.target.value)
-                      }
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>ประกันสุขภาพ (สูงสุด 25,000)</Label>
-                    <Input
-                      type="number"
-                      value={input.healthInsurance || ""}
-                      onChange={(e) =>
-                        handleNumberChange("healthInsurance", e.target.value)
-                      }
-                      placeholder="0"
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <Label>ประกันชีวิต (บาท/ปี)</Label>
+                  <Input
+                    type="number"
+                    value={input.lifeInsurance || ""}
+                    onChange={(e) =>
+                      handleNumberChange("lifeInsurance", e.target.value)
+                    }
+                    placeholder="0"
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>RMF/SSF กองทุนเพื่อการเกษียณ (บาท/ปี)</Label>
+                  <Label>ประกันสุขภาพ (บาท/ปี)</Label>
+                  <Input
+                    type="number"
+                    value={input.healthInsurance || ""}
+                    onChange={(e) =>
+                      handleNumberChange("healthInsurance", e.target.value)
+                    }
+                    placeholder="0"
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Extra Tab */}
+              <TabsContent value="extra" className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>เลี้ยงดูบิดามารดา (บาท/ปี)</Label>
+                  <Input
+                    type="number"
+                    value={input.parentCare || ""}
+                    onChange={(e) =>
+                      handleNumberChange("parentCare", e.target.value)
+                    }
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>จำนวนบุตร</Label>
+                  <Input
+                    type="number"
+                    value={input.children || ""}
+                    onChange={(e) =>
+                      handleNumberChange("children", e.target.value)
+                    }
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>RMF/SSF (บาท/ปี)</Label>
                   <Input
                     type="number"
                     value={input.retirementFund || ""}
@@ -237,30 +217,6 @@ export default function CalculatorPage() {
                     }
                     placeholder="0"
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>เลี้ยงดูบิดามารดา (สูงสุด 60,000)</Label>
-                    <Input
-                      type="number"
-                      value={input.parentCare || ""}
-                      onChange={(e) =>
-                        handleNumberChange("parentCare", e.target.value)
-                      }
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>คู่สมรสไม่มีรายได้</Label>
-                    <Input
-                      type="number"
-                      value={input.spouseCare || ""}
-                      onChange={(e) =>
-                        handleNumberChange("spouseCare", e.target.value)
-                      }
-                      placeholder="0"
-                    />
-                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>เงินบริจาค (บาท/ปี)</Label>
@@ -273,94 +229,35 @@ export default function CalculatorPage() {
                     placeholder="0"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>จำนวนบุตร</Label>
-                  <Select
-                    value={String(input.children)}
-                    onValueChange={(v) =>
-                      updateField("children", Number(v))
-                    }
-                  >
-                    <SelectTrigger size="sm" className="w-full">
-                      <SelectValue placeholder="เลือก" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 11 }, (_, i) => i).map((n) => (
-                        <SelectItem key={n} value={String(n)}>
-                          {n} คน
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>ค่าเล่าเรียนบุตร (บาท/ปี)</Label>
-                  <Input
-                    type="number"
-                    value={input.childrenEducation || ""}
-                    onChange={(e) =>
-                      handleNumberChange("childrenEducation", e.target.value)
-                    }
-                    placeholder="0"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Extra Tab */}
-          <TabsContent value="extra" className="mt-4">
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle className="text-sm">ข้อมูลเพิ่มเติม</CardTitle>
-                <CardDescription>
-                  ข้อมูลส่วนบุคคลที่มีผลต่อการคำนวณภาษี
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm">มีคู่สมรส</Label>
-                    <p className="text-[10px] text-muted-foreground">
-                      คู่สมรสไม่มีรายได้
-                    </p>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="hasSpouse"
+                      checked={input.hasSpouse}
+                      onChange={(e) =>
+                        updateInput({ hasSpouse: e.target.checked })
+                      }
+                      className="rounded"
+                    />
+                    <Label htmlFor="hasSpouse" className="text-xs">
+                      มีคู่สมรส
+                    </Label>
                   </div>
-                  <Select
-                    value={input.hasSpouse ? "yes" : "no"}
-                    onValueChange={(v) =>
-                      updateField("hasSpouse", v === "yes")
-                    }
-                  >
-                    <SelectTrigger size="sm" className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no">ไม่มี</SelectItem>
-                      <SelectItem value="yes">มี</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm">อายุเกิน 65 ปี</Label>
-                    <p className="text-[10px] text-muted-foreground">
-                      ได้รับยกเว้นเพิ่ม 190,000 บาท
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isOver65"
+                      checked={input.isOver65}
+                      onChange={(e) =>
+                        updateInput({ isOver65: e.target.checked })
+                      }
+                      className="rounded"
+                    />
+                    <Label htmlFor="isOver65" className="text-xs">
+                      อายุเกิน 65
+                    </Label>
                   </div>
-                  <Select
-                    value={input.isOver65 ? "yes" : "no"}
-                    onValueChange={(v) =>
-                      updateField("isOver65", v === "yes")
-                    }
-                  >
-                    <SelectTrigger size="sm" className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no">ไม่ใช่</SelectItem>
-                      <SelectItem value="yes">ใช่</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>ลดหย่อนอื่นๆ (บาท/ปี)</Label>
@@ -372,25 +269,14 @@ export default function CalculatorPage() {
                     }
                     placeholder="0"
                   />
-                  <p className="text-[10px] text-muted-foreground">
-                    รายการลดหย่อนอื่นๆ ที่ไม่รวมในหมวดข้างต้น
-                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-        {/* Result */}
-        {result && <TaxResultCard result={result} />}
-
-        {/* Info */}
-        <div className="rounded-lg bg-blue-500/5 p-3 text-center">
-          <p className="text-[11px] text-muted-foreground">
-            💡 ตัวเลขที่แสดงเป็นตัวเลขโดยประมาณ อิงตามอัตราภาษีเงินได้บุคคลธรรมดาล่าสุด
-            กรุณาตรวจสอบกับผู้เชี่ยวชาญด้านภาษีก่อนยื่นแบบ
-          </p>
-        </div>
+        {/* Results */}
+        <TaxResultCard result={result} />
       </div>
     </div>
   );
